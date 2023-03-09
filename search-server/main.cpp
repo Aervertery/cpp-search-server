@@ -123,6 +123,10 @@ private:
         return query;
     }
 
+    double ComputeIdf (const string& word) const {
+        return log((document_count_ * 1.0) / documents_freqs_.at(word).size());
+    }
+
     vector<Document> FindAllDocuments(const QueryContent& query_words) const {
         vector<Document> matched_documents;
         map<int, double> id_relevance;
@@ -130,7 +134,7 @@ private:
             if (documents_freqs_.count(word) == 0) {
                 continue;
             }
-            const double inverse_document_frequency = log((document_count_ * 1.0) / documents_freqs_.at(word).size());
+            const double inverse_document_frequency = ComputeIdf(word);
             for (const auto [document_id, term_frequency] : documents_freqs_.at(word)) {
                 id_relevance[document_id] += inverse_document_frequency * term_frequency;
             }

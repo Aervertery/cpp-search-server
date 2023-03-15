@@ -76,8 +76,11 @@ public:
     }
 
     vector<Document> FindTopDocuments(const string& raw_query) const {
-        return FindTopDocuments(raw_query, [](int document_id, DocumentStatus status, int rating)
-            { return status == DocumentStatus::ACTUAL; });
+        return FindTopDocuments(raw_query, DocumentStatus::ACTUAL);
+    }
+
+    vector<Document> FindTopDocuments(const string& raw_query, DocumentStatus status) const {
+        return FindTopDocuments(raw_query, [status](int document_id, DocumentStatus status_, int rating) { return status_ == status; });
     }
 
     size_t GetDocumentCount() const {
@@ -225,6 +228,8 @@ private:
         return matched_documents;
     }
 };
+
+//вывод и main для теста
 
 void PrintDocument(const Document& document) {
     cout << "{ "s

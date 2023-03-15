@@ -11,6 +11,8 @@ using namespace std;
 
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
 
+const double ALLOWABLE_ERROR = 1e-6;
+
 string ReadLine() {
     string s;
     getline(cin, s);
@@ -88,7 +90,6 @@ public:
     }
 
     template <typename Predicate>
-
     vector<Document> FindTopDocuments(const string& raw_query,
         Predicate predicate) const {
         const QueryContent query = ParseQuery(raw_query);
@@ -96,7 +97,7 @@ public:
 
         sort(matched_documents.begin(), matched_documents.end(),
             [predicate](const Document& lhs, const Document& rhs) {
-                if (abs(lhs.relevance - rhs.relevance) < 1e-6) {
+                if (abs(lhs.relevance - rhs.relevance) < ALLOWABLE_ERROR) {
                     return lhs.rating > rhs.rating;
                 }
                 else {

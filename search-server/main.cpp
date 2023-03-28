@@ -71,10 +71,6 @@ enum class DocumentStatus {
 
 class SearchServer {
 public:
-    // Defines an invalid document id
-    // You can refer to this constant as SearchServer::INVALID_DOCUMENT_ID
-    inline static constexpr int INVALID_DOCUMENT_ID = -1;
-
     SearchServer(const string& text) {
         for (const string& word : SplitIntoWords(text)) {
             if (!IsValidWord(text)) {
@@ -90,9 +86,6 @@ public:
             for (const string& word : SplitIntoWords(element)) {
                 if (!IsValidWord(element)) {
                     throw invalid_argument("This stop-word contains invalid characters"s);
-                }
-                if (stop_words_.count(word)) {
-                    continue;
                 }
                 stop_words_.insert(word);
             }
@@ -117,7 +110,7 @@ public:
     }
 
     vector<Document> FindTopDocuments(const string& raw_query, DocumentStatus status) const {
-        return FindTopDocuments(raw_query, [status](int document_id, DocumentStatus status_, int rating) { 
+        return FindTopDocuments(raw_query, [status](int document_id, DocumentStatus status_, int rating) {
             return status_ == status; });
     }
     size_t GetDocumentCount() const {
@@ -127,9 +120,6 @@ public:
     template <typename Predicate>
     vector<Document> FindTopDocuments(const string& raw_query,
         Predicate predicate) const {
-        if (!IsValidWord(raw_query)) {
-            throw invalid_argument("Query must not contain invalid characters"s);;
-        }
         const QueryContent query = ParseQuery(raw_query);
         vector<Document> matched_documents = FindAllDocuments(query, predicate);
 
@@ -150,29 +140,21 @@ public:
 
     tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query,
         int document_id) const {
-        if (!IsValidWord(raw_query)) {
-            throw invalid_argument("Invalid query"s);
-        }
         const QueryContent query = ParseQuery(raw_query);
         vector<string> matched_words;
         for (const string& word : query.plus_words_) {
-            if (documents_freqs_.count(word) == 0) {
-                continue;
-            }
-            if (documents_freqs_.at(word).count(document_id)) {
-                matched_words.push_back(word);
+            if (documents_freqs_.count(word) != 0) {
+                if (documents_freqs_.at(word).count(document_id)) {
+                    matched_words.push_back(word);
+                }
             }
         }
-        for (const string& word : query.minus_words_) {   //Лучше пройтись по минус-словам в первую очередь,
-            if (word[0] == '-' || word.empty()) {         //или допускается оставить проверку здесь?
-                throw invalid_argument("Invalid query"s); //Или лучше это проверять в ParseQuery/добавить отдельный метод?
-            }
-            if (documents_freqs_.count(word) == 0) {
-                continue;
-            }
-            if (documents_freqs_.at(word).count(document_id)) {
-                matched_words.clear();
-                break;
+        for (const string& word : query.minus_words_) {
+            if (documents_freqs_.count(word) != 0) {
+                if (documents_freqs_.at(word).count(document_id)) {
+                    matched_words.clear();
+                    break;
+                }
             }
         }
         return { matched_words, documents_.at(document_id).status };
@@ -193,6 +175,10 @@ private:
     struct DocumentData {
         int rating;
         DocumentStatus status;
+    };
+    struct QueryWordContent {
+        string word;
+        bool IsMinus;
     };
     map<string, map<int, double>> documents_freqs_; //словарь слово -> (словарь id документа -> Term frequency слова в этом документе)
     set<string> stop_words_;
@@ -219,6 +205,21 @@ private:
         return words;
     }
 
+    QueryWordContent IsMinusWord(const string& word) const {
+        string new_word;
+        if (!IsValidWord(word)) {
+            throw invalid_argument("This word is invalid"s);
+        }
+        if (word[0] == '-') {
+            new_word = word.substr(1);
+            if (new_word.empty() || new_word[0] == '-') {
+                throw invalid_argument("Invalid word"s);
+            }
+            return { new_word, true };
+        }
+        return { word, false };
+    }
+
     static int ComputeAverageRating(const vector<int>& ratings) {
         if (ratings.empty()) {
             return 0;
@@ -232,14 +233,13 @@ private:
 
     QueryContent ParseQuery(const string& text) const {
         QueryContent query;
-        string new_word;
         for (string& word : SplitIntoWordsNoStop(text)) {
-            if (word[0] == '-') {
-                new_word = word.substr(1);
-                query.minus_words_.insert(new_word);
+            QueryWordContent element = IsMinusWord(word);
+            if (element.IsMinus) {
+                query.minus_words_.insert(element.word);
             }
             else {
-                query.plus_words_.insert(word);
+                query.plus_words_.insert(element.word);
             }
         }
         return query;
@@ -253,26 +253,21 @@ private:
     vector<Document> FindAllDocuments(const QueryContent& query, Predicate predicate) const {
         map<int, double> document_to_relevance;
         for (const string& word : query.plus_words_) {
-            if (documents_freqs_.count(word) == 0) {
-                continue;
-            }
-            const double inverse_document_frequency = ComputeIdf(word);
-            for (const auto [document_id, term_freq] : documents_freqs_.at(word)) {
-                const auto& document_data = documents_.at(document_id);
-                if (predicate(document_id, document_data.status, document_data.rating)) {
-                    document_to_relevance[document_id] += term_freq * inverse_document_frequency;
+            if (documents_freqs_.count(word) != 0) {
+                const double inverse_document_frequency = ComputeIdf(word);
+                for (const auto [document_id, term_freq] : documents_freqs_.at(word)) {
+                    const auto& document_data = documents_.at(document_id);
+                    if (predicate(document_id, document_data.status, document_data.rating)) {
+                        document_to_relevance[document_id] += term_freq * inverse_document_frequency;
+                    }
                 }
             }
         }
         for (const string& word : query.minus_words_) {
-            if (word[0] == '-' || word.empty()) {        //Лучше пройтись по минус-словам в первую очередь,
-                throw invalid_argument("Invalid query"s);//или допускается оставить проверку здесь?
-            }                                            //Или лучше это проверять в ParseQuery/добавить отдельный метод?
-            if (documents_freqs_.count(word) == 0) {
-                continue;
-            }
-            for (const auto [document_id, _] : documents_freqs_.at(word)) {
-                document_to_relevance.erase(document_id);
+            if (documents_freqs_.count(word) != 0) {
+                for (const auto [document_id, _] : documents_freqs_.at(word)) {
+                    document_to_relevance.erase(document_id);
+                }
             }
         }
         vector<Document> matched_documents;

@@ -205,6 +205,17 @@ private:
         return words;
     }
 
+    static int ComputeAverageRating(const vector<int>& ratings) {
+        if (ratings.empty()) {
+            return 0;
+        }
+        int rating_sum = 0;
+        for (const int rating : ratings) {
+            rating_sum += rating;
+        }
+        return rating_sum / static_cast<int>(ratings.size());
+    }
+
     QueryWordContent IsMinusWord(const string& word) const {
         string new_word;
         if (!IsValidWord(word)) {
@@ -218,17 +229,6 @@ private:
             return { new_word, true };
         }
         return { word, false };
-    }
-
-    static int ComputeAverageRating(const vector<int>& ratings) {
-        if (ratings.empty()) {
-            return 0;
-        }
-        int rating_sum = 0;
-        for (const int rating : ratings) {
-            rating_sum += rating;
-        }
-        return rating_sum / static_cast<int>(ratings.size());
     }
 
     QueryContent ParseQuery(const string& text) const {

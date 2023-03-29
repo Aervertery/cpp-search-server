@@ -43,6 +43,17 @@ vector<string> SplitIntoWords(const string& text) {
     }
     return words;
 }
+
+template <typename StringContainer>
+set<string> SplitInputStringsContainerIntoStrings(const StringContainer& input_strings) {
+    set<string> result;
+    for (const string& element : input_strings) {
+        for (const string& word : SplitIntoWords(element)) {
+            result.insert(word);
+        }
+    }
+    return result;
+}
 struct Document {
     Document() :
         id(0),
@@ -71,25 +82,16 @@ enum class DocumentStatus {
 
 class SearchServer {
 public:
-    SearchServer(const string& text) {
-        for (const string& word : SplitIntoWords(text)) {
-            if (!IsValidWord(text)) {
+    template <typename StringContainer>
+    SearchServer(const StringContainer& text) : stop_words_(SplitInputStringsContainerIntoStrings(text)) {
+        for (const string& word : stop_words_) {
+            if (!IsValidWord(word)) {
                 throw invalid_argument("This stop-word contains invalid characters"s);
             }
-            stop_words_.insert(word);
         }
     }
 
-    template <typename T>
-    SearchServer(const T& text) {
-        for (const string& element : text) {
-            for (const string& word : SplitIntoWords(element)) {
-                if (!IsValidWord(element)) {
-                    throw invalid_argument("This stop-word contains invalid characters"s);
-                }
-                stop_words_.insert(word);
-            }
-        }
+    SearchServer(const string& text) : SearchServer(SplitIntoWords(text)) {
     }
 
     void AddDocument(int document_id, const string& document, DocumentStatus status,
@@ -103,6 +105,7 @@ public:
             documents_freqs_[word][document_id] += inv_word_count;
         }
         documents_.emplace(document_id, DocumentData{ ComputeAverageRating(ratings), status });
+        documents_ids_.push_back(document_id);
     }
 
     vector<Document> FindTopDocuments(const string& raw_query) const {
@@ -164,8 +167,7 @@ public:
         if (index < 0 || index >= documents_.size()) {
             throw out_of_range("Invalid document id"s);
         }
-        auto result = next(documents_.begin(), index);
-        return result->first;
+        return documents_ids_[index];
     }
 private:
     struct QueryContent {
@@ -179,10 +181,12 @@ private:
     struct QueryWordContent {
         string word;
         bool IsMinus;
+        bool IsStop;
     };
     map<string, map<int, double>> documents_freqs_; //словарь слово -> (словарь id документа -> Term frequency слова в этом документе)
     set<string> stop_words_;
     map<int, DocumentData> documents_;
+    vector<int> documents_ids_;
 
     static bool IsValidWord(const string& word) {
         // A valid word must not contain special characters
@@ -217,29 +221,31 @@ private:
     }
 
     QueryWordContent IsMinusWord(const string& word) const {
-        string new_word;
         if (!IsValidWord(word)) {
             throw invalid_argument("This word is invalid"s);
         }
         if (word[0] == '-') {
-            new_word = word.substr(1);
+            const string new_word = word.substr(1);
             if (new_word.empty() || new_word[0] == '-') {
                 throw invalid_argument("Invalid word"s);
             }
-            return { new_word, true };
+            return { new_word, true, IsStopWord(new_word) };
         }
-        return { word, false };
+        return { word, false, IsStopWord(word) };
     }
 
     QueryContent ParseQuery(const string& text) const {
         QueryContent query;
-        for (string& word : SplitIntoWordsNoStop(text)) {
+        for (string& word : SplitIntoWords(text)) {
             QueryWordContent element = IsMinusWord(word);
-            if (element.IsMinus) {
-                query.minus_words_.insert(element.word);
-            }
-            else {
-                query.plus_words_.insert(element.word);
+            if (!element.IsStop) {
+                if (element.IsMinus) {
+                    query.minus_words_.insert(element.word);
+                }
+                else {
+                    query.plus_words_.insert(element.word);
+                }
+
             }
         }
         return query;

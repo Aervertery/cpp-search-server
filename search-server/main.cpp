@@ -2,7 +2,7 @@
 #include "request_queue.h"
 #include "paginator.h"
 
-//using namespace std;
+using namespace std; //Подключил пространство имён, чтобы прошли тесты тренажёра. Программа работает и без этого
 
 int main() {
     SearchServer search_server("and in at"s);

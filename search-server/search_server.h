@@ -1,7 +1,7 @@
 #pragma once
 #include <cmath>
 #include <map>
-#include <cmath>
+#include <set>
 #include "document.h"
 #include "string_processing.h"
 #include "read_input_functions.h"

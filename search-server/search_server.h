@@ -1,10 +1,9 @@
 #pragma once
 #include <cmath>
 #include <map>
-#include <set>
 #include "document.h"
-#include "string_processing.h"
 #include "read_input_functions.h"
+#include "string_processing.h"
 
 using std::literals::string_literals::operator""s;
 
@@ -42,18 +41,6 @@ private:
         DocumentStatus status;
     };
 
-
-    struct QueryContent {
-        std::set<std::string> plus_words_;
-        std::set<std::string> minus_words_;
-    };
-
-    struct QueryWordContent {
-        std::string word;
-        bool IsMinus;
-        bool IsStop;
-    };
-
     std::map<std::string, std::map<int, double>> documents_freqs_; //словарь слово -> (словарь id документа -> Term frequency слова в этом документе)
     std::set<std::string> stop_words_;
     std::map<int, DocumentData> documents_;
@@ -62,13 +49,7 @@ private:
     template <typename StringContainer>
     std::set<std::string> SplitInputStringsContainerIntoStrings(const StringContainer& input_strings);
 
-    QueryWordContent IsMinusWord(const std::string& word) const;
-
     QueryContent ParseQuery(const std::string& text) const;
-
-    bool IsStopWord(const std::string& word) const;
-
-    std::vector<std::string> SplitIntoWordsNoStop(const std::string& text) const;
 
     double ComputeIdf(const std::string& word) const;  
 

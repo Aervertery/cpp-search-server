@@ -4,22 +4,18 @@
 #include <vector>
 #include <stdexcept>
 
-using std::literals::string_literals::operator""s;
-
 std::vector<std::string> SplitIntoWords(const std::string& text);
 
 extern std::set<std::string> stop_words_processing;
 
 template <typename StringContainer>
 std::set<std::string> SplitInputStringsContainerIntoStrings(const StringContainer& input_strings) {
-    std::set<std::string> result;
     for (const std::string& element : input_strings) {
         for (const std::string& word : SplitIntoWords(element)) {
-            result.insert(word);
+            stop_words_processing.insert(word);
         }
     }
-    stop_words_processing = result;
-    return result;
+    return stop_words_processing;
 }
     
 struct QueryContent {

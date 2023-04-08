@@ -1,5 +1,7 @@
 #include "string_processing.h"
 
+using std::literals::string_literals::operator""s;
+
 std::set<std::string> stop_words_processing;
 
 std::vector<std::string> SplitIntoWords(const std::string& text) {

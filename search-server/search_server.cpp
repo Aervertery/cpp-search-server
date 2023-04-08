@@ -52,6 +52,50 @@ std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument
     return { matched_words, documents_.at(document_id).status };
 }
 
+SearchServer::QueryWordContent SearchServer::IsMinusWord(const std::string& word) const {
+    if (!IsValidWord(word)) {
+        throw std::invalid_argument("This word is invalid"s);
+    }
+    if (word[0] == '-') {
+        const std::string new_word = word.substr(1);
+        if (new_word.empty() || new_word[0] == '-') {
+            throw std::invalid_argument("Invalid word"s);
+        }
+        return { new_word, true, IsStopWord(new_word) };
+    }
+    return { word, false, IsStopWord(word) };
+}
+
+SearchServer::QueryContent SearchServer::ParseQuery(const std::string& text) const {
+    QueryContent query;
+    for (std::string& word : SplitIntoWords(text)) {
+        QueryWordContent element = IsMinusWord(word);
+        if (!element.IsStop) {
+            if (element.IsMinus) {
+                query.minus_words_.insert(element.word);
+            }
+            else {
+                query.plus_words_.insert(element.word);
+            }
+        }
+    }
+    return query;
+}
+
+bool SearchServer::IsStopWord(const std::string& word) const {
+    return stop_words_.count(word) > 0;
+}
+
+std::vector<std::string> SearchServer::SplitIntoWordsNoStop(const std::string& text) const {
+    std::vector<std::string> words;
+    for (const std::string& word : SplitIntoWords(text)) {
+        if (!IsStopWord(word)) {
+            words.push_back(word);
+        }
+    }
+    return words;
+}
+
 int SearchServer::GetDocumentId(int index) const {
     if (index < 0 || index >= documents_.size()) {
         throw std::out_of_range("Invalid document id"s);

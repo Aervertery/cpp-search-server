@@ -46,8 +46,27 @@ private:
     std::map<int, DocumentData> documents_;
     std::vector<int> documents_ids_;
 
+    struct QueryContent {
+        std::set<std::string> plus_words_;
+        std::set<std::string> minus_words_;
+    };
+
+    struct QueryWordContent {
+        std::string word;
+        bool IsMinus;
+        bool IsStop;
+    };
+
     template <typename StringContainer>
     std::set<std::string> SplitInputStringsContainerIntoStrings(const StringContainer& input_strings);
+
+    bool IsValidWord(const std::string& word) const;
+
+    bool IsStopWord(const std::string& word) const;
+
+    QueryWordContent IsMinusWord(const std::string& word) const;
+
+    std::vector<std::string> SplitIntoWordsNoStop(const std::string& text) const;
 
     QueryContent ParseQuery(const std::string& text) const;
 

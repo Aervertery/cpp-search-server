@@ -8,7 +8,7 @@ void SearchServer::AddDocument(int document_id, const std::string& document, Doc
     if (document_id < 0 || documents_.count(document_id) != 0 || !IsValidWord(document)) {
         throw std::invalid_argument("Invalid document data"s);
     }
-    const std::vector<std::string> words = SplitIntoWordsNoStop(document, stop_words_);
+    const std::vector<std::string> words = SplitIntoWordsNoStop(document);
     const double inv_word_count = 1.0 / words.size();
     for (const std::string& word : words) {
         documents_freqs_[word][document_id] += inv_word_count;
@@ -52,10 +52,45 @@ std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument
     return { matched_words, documents_.at(document_id).status };
 }
 
-QueryContent SearchServer::ParseQuery(const std::string& text) const {
+bool SearchServer::IsValidWord(const std::string& word) const{
+    // A valid word must not contain special characters
+    return none_of(word.begin(), word.end(), [](char c) {
+        return c >= '\0' && c < ' ';
+        });
+}
+
+SearchServer::QueryWordContent SearchServer::IsMinusWord(const std::string& word) const{
+    if (!IsValidWord(word)) {
+        throw std::invalid_argument("This word is invalid"s);
+    }
+    if (word[0] == '-') {
+        const std::string new_word = word.substr(1);
+        if (new_word.empty() || new_word[0] == '-') {
+            throw std::invalid_argument("Invalid word"s);
+        }
+        return { new_word, true, IsStopWord(new_word) };
+    }
+    return { word, false, IsStopWord(word) };
+}
+
+bool SearchServer::IsStopWord(const std::string& word) const {
+    return stop_words_.count(word) > 0;
+}
+
+std::vector<std::string> SearchServer::SplitIntoWordsNoStop(const std::string& text) const {
+    std::vector<std::string> words;
+    for (const std::string& word : SplitIntoWords(text)) {
+        if (!IsStopWord(word)) {
+            words.push_back(word);
+        }
+    }
+    return words;
+}
+
+SearchServer::QueryContent SearchServer::ParseQuery(const std::string& text) const {
     QueryContent query;
     for (std::string& word : SplitIntoWords(text)) {
-        QueryWordContent element = IsMinusWord(word, stop_words_);
+        QueryWordContent element = IsMinusWord(word);
         if (!element.IsStop) {
             if (element.IsMinus) {
                 query.minus_words_.insert(element.word);

@@ -4,6 +4,7 @@
 #include "document.h"
 #include "read_input_functions.h"
 #include "string_processing.h"
+#include "log_duration.h"
 
 using std::literals::string_literals::operator""s;
 
@@ -90,6 +91,8 @@ SearchServer::SearchServer(const StringContainer& text) : stop_words_(SplitInput
 template <typename Predicate>
 std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_query,
     Predicate predicate) const {
+    LOG_DURATION_STREAM(__func__, std::cout); {
+        std::cout << raw_query << std::endl;
     const QueryContent query = ParseQuery(raw_query);
     std::vector<Document> matched_documents = FindAllDocuments(query, predicate);
     sort(matched_documents.begin(), matched_documents.end(),
@@ -105,6 +108,7 @@ std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_quer
         matched_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
     }
     return matched_documents;
+}
 }
 
 template <typename Predicate>

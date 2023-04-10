@@ -32,24 +32,27 @@ size_t SearchServer::GetDocumentCount() const {
 
 std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument(const std::string& raw_query,
     int document_id) const {
-    const QueryContent query = ParseQuery(raw_query);
-    std::vector<std::string> matched_words;
-    for (const std::string& word : query.plus_words_) {
-        if (documents_freqs_.count(word) != 0) {
-            if (documents_freqs_.at(word).count(document_id)) {
-                matched_words.push_back(word);
+    LOG_DURATION_STREAM(__func__, std::cout); {
+        std::cout << raw_query << std::endl;
+        const QueryContent query = ParseQuery(raw_query);
+        std::vector<std::string> matched_words;
+        for (const std::string& word : query.plus_words_) {
+            if (documents_freqs_.count(word) != 0) {
+                if (documents_freqs_.at(word).count(document_id)) {
+                    matched_words.push_back(word);
+                }
             }
         }
-    }
-    for (const std::string& word : query.minus_words_) {
-        if (documents_freqs_.count(word) != 0) {
-            if (documents_freqs_.at(word).count(document_id)) {
-                matched_words.clear();
-                break;
+        for (const std::string& word : query.minus_words_) {
+            if (documents_freqs_.count(word) != 0) {
+                if (documents_freqs_.at(word).count(document_id)) {
+                    matched_words.clear();
+                    break;
+                }
             }
         }
+        return { matched_words, documents_.at(document_id).status };
     }
-    return { matched_words, documents_.at(document_id).status };
 }
 
 bool SearchServer::IsValidWord(const std::string& word) const{

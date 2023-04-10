@@ -12,12 +12,12 @@ int main() {
     search_server.AddDocument(3, "big cat fancy collar "s, DocumentStatus::ACTUAL, { 1, 2, 8 });
     search_server.AddDocument(4, "big dog sparrow Eugene"s, DocumentStatus::ACTUAL, { 1, 3, 2 });
     search_server.AddDocument(5, "big dog sparrow Vasiliy"s, DocumentStatus::ACTUAL, { 1, 1, 1 });
-    for (int i = 0; i < 1439; ++i) {
+    /*r(int i = 0; i < 1439; ++i) {
         request_queue.AddFindRequest("empty request"s);
     }
     request_queue.AddFindRequest("curly dog"s);
     request_queue.AddFindRequest("big collar"s);
-    request_queue.AddFindRequest("sparrow"s);
+    request_queue.AddFindRequest("sparrow"s);*/
     std::cout << "Total empty requests: "s << request_queue.GetNoResultRequests() << std::endl;
     int page_size = 2;
     auto search_results = search_server.FindTopDocuments("big curly cat"s);
@@ -28,3 +28,12 @@ int main() {
     }
     return 0;
 }
+
+//TODO: вместо GetDocumentId сделать возвращающие итераторы методы begin(), end() для получения доступа к id всех документов
+//метод получения частоты слов по id документа const map<string, double>& GetWordFrequencies(int document_id) const получаем id, возвращаем словарь слово -> количество повторений этого слова в документе / на количество
+//слов в документе. Если документа нет, вернуть пустой словарь
+//Метод удаления документов из сервера  void RemoveDocument(int document_id). При удалении обновить documents_freqs_
+//В remove_deduplicates.h сделать метод для поиска и удаления документов  void RemoveDuplicates(SearchServer& search_server). Полное повторение набора слов, количество повторений не имеет значения, стоп-слова игнорируются. 
+//При удалении должно выводиться сообщение вида "Found duplicate document id 7"
+//В DocumentData добавить set<string> со словами из этого документа
+ 

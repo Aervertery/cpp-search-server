@@ -2,28 +2,22 @@
 
 void RemoveDuplicates(SearchServer& search_server) {
 	std::set<int> ids_to_remove;
-	int count = 1;
+	std::map<std::set<std::string>, int> words_to_id;
 	for (const int it : search_server) {
-		if (*prev(search_server.end()) == it) {
-			break;
+		std::set<std::string> words;
+		for (const auto& [key, value] : search_server.GetWordFrequencies(it)) {
+			words.emplace(key);
 		}
-		auto test1 = search_server.GetWordFrequencies(it);
-		for (auto it_ = next(search_server.begin(), count++); it_ != search_server.end(); ++it_) {
-			auto test2 = search_server.GetWordFrequencies(*it_);
-			if (key_compare(test1, test2)) {
-				if (*it_ > it) {
-					ids_to_remove.emplace(*it_);
-					break;
-				}
-				else {
-					ids_to_remove.emplace(it);
-					break;
-				}
-			}
+		auto it_ = words_to_id.find(words);
+		if (it_ == words_to_id.end()) {
+			words_to_id[words] = it;
+		}
+		else {
+			(it < it_->second) ? ids_to_remove.emplace(it_->second) : ids_to_remove.emplace(it);
 		}
 	}
 	for (int id : ids_to_remove) {
 		std::cout << "Found duplicate document id " << id << std::endl;
-			search_server.RemoveDocument(id);
+		search_server.RemoveDocument(id);
 	}
 }

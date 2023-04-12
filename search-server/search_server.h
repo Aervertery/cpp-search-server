@@ -24,22 +24,22 @@ public:
     void AddDocument(int document_id, const std::string& document, DocumentStatus status,
         const std::vector<int>& ratings);
 
+    template <typename Predicate>
+    std::vector<Document> FindTopDocuments(const std::string& raw_query,
+        Predicate predicate) const;
+
     std::vector<Document> FindTopDocuments(const std::string& raw_query) const;
 
     std::vector<Document> FindTopDocuments(const std::string& raw_query, DocumentStatus status) const;
 
     size_t GetDocumentCount() const;
 
-    template <typename Predicate>
-    std::vector<Document> FindTopDocuments(const std::string& raw_query,
-        Predicate predicate) const;
-
     std::tuple<std::vector<std::string>, DocumentStatus> MatchDocument(const std::string& raw_query,
         int document_id) const;
 
-    std::vector<int>::const_iterator begin() const;
+    std::set<int>::const_iterator begin() const;
 
-    std::vector<int>::const_iterator end() const;
+    std::set<int>::const_iterator end() const;
 
     const std::map<std::string, double>& GetWordFrequencies(int document_id) const;
 
@@ -54,8 +54,7 @@ private:
     std::map<std::string, std::map<int, double>> documents_freqs_; //словарь слово -> (словарь id документа -> Term frequency слова в этом документе)
     std::set<std::string> stop_words_;
     std::map<int, DocumentData> documents_;
-    const std::map<std::string, double> empty_map;
-    std::vector<int> documents_ids_;
+    std::set<int> documents_ids_;
 
     struct QueryContent {
         std::set<std::string> plus_words_;

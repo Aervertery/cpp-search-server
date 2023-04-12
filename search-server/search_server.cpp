@@ -16,7 +16,8 @@ void SearchServer::AddDocument(int document_id, const std::string& document, Doc
     }
     documents_[document_id].rating = ComputeAverageRating(ratings);
     documents_[document_id].status = status;
-    documents_ids_.push_back(document_id);
+    documents_ids_.emplace(document_id);
+    const std::set<std::string> words_ = std::set(words.begin(), words.end());
 }
 
 std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_query) const {
@@ -108,11 +109,11 @@ SearchServer::QueryContent SearchServer::ParseQuery(const std::string& text) con
     return query;
 }
 
-std::vector<int>::const_iterator SearchServer::begin() const {
+std::set<int>::const_iterator SearchServer::begin() const {
     return SearchServer::documents_ids_.begin();
 }
 
-std::vector<int>::const_iterator SearchServer::end() const {
+std::set<int>::const_iterator SearchServer::end() const {
     return SearchServer::documents_ids_.end();
 }
 
@@ -132,6 +133,7 @@ int SearchServer::ComputeAverageRating(const std::vector<int>& ratings) {
 }
 
 const std::map<std::string, double>& SearchServer::GetWordFrequencies(int document_id) const {
+    static const std::map<std::string, double> empty_map;
     auto it = documents_.lower_bound(document_id);
     if (it != documents_.end()) {
         return documents_.at(document_id).word_frequencies;
@@ -140,13 +142,13 @@ const std::map<std::string, double>& SearchServer::GetWordFrequencies(int docume
 }
 
 void SearchServer::RemoveDocument(int document_id) {
-    documents_ids_.erase(find(documents_ids_.begin(), documents_ids_.end(), document_id));
+    documents_ids_.erase(document_id);
     auto it = documents_.find(document_id);
-            for (auto& [word, freq] : it->second.word_frequencies) {
-                documents_freqs_[word].erase(documents_freqs_[word].find(it->first));
-            }
-            documents_.erase(document_id);
-            return ;
+    for (auto& [word, freq] : it->second.word_frequencies) {
+        documents_freqs_[word].erase(documents_freqs_[word].find(it->first));
+    }
+    documents_.erase(document_id);
+    return ;
 }
 
 void AddDocument(SearchServer& search_server, int document_id, const std::string& raw_query, DocumentStatus status,

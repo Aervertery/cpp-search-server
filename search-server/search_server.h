@@ -1,6 +1,7 @@
 #pragma once
 #include <cmath>
 #include <map>
+#include <algorithm>
 #include "document.h"
 #include "read_input_functions.h"
 #include "string_processing.h"
@@ -14,6 +15,7 @@ const double ALLOWABLE_ERROR = 1e-6;
 
 class SearchServer {
 public:
+
     template <typename StringContainer>
     SearchServer(const StringContainer& text);
 
@@ -25,7 +27,7 @@ public:
     std::vector<Document> FindTopDocuments(const std::string& raw_query) const;
 
     std::vector<Document> FindTopDocuments(const std::string& raw_query, DocumentStatus status) const;
-    
+
     size_t GetDocumentCount() const;
 
     template <typename Predicate>
@@ -35,16 +37,24 @@ public:
     std::tuple<std::vector<std::string>, DocumentStatus> MatchDocument(const std::string& raw_query,
         int document_id) const;
 
-    int GetDocumentId(int index) const;
+    std::vector<int>::const_iterator begin() const;
+
+    std::vector<int>::const_iterator end() const;
+
+    const std::map<std::string, double>& GetWordFrequencies(int document_id) const;
+
+    void RemoveDocument(int document_id);
 private:
     struct DocumentData {
         int rating;
         DocumentStatus status;
+        std::map<std::string, double> word_frequencies;
     };
 
     std::map<std::string, std::map<int, double>> documents_freqs_; //словарь слово -> (словарь id документа -> Term frequency слова в этом документе)
     std::set<std::string> stop_words_;
     std::map<int, DocumentData> documents_;
+    const std::map<std::string, double> empty_map;
     std::vector<int> documents_ids_;
 
     struct QueryContent {
@@ -71,7 +81,7 @@ private:
 
     QueryContent ParseQuery(const std::string& text) const;
 
-    double ComputeIdf(const std::string& word) const;  
+    double ComputeIdf(const std::string& word) const;
 
     static int ComputeAverageRating(const std::vector<int>& ratings);
 
@@ -91,24 +101,24 @@ SearchServer::SearchServer(const StringContainer& text) : stop_words_(SplitInput
 template <typename Predicate>
 std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_query,
     Predicate predicate) const {
-    LOG_DURATION_STREAM(__func__, std::cout); {
-        std::cout << raw_query << std::endl;
-    const QueryContent query = ParseQuery(raw_query);
-    std::vector<Document> matched_documents = FindAllDocuments(query, predicate);
-    sort(matched_documents.begin(), matched_documents.end(),
-        [predicate](const Document& lhs, const Document& rhs) {
-            if (std::abs(lhs.relevance - rhs.relevance) < ALLOWABLE_ERROR) {
-                return lhs.rating > rhs.rating;
-            }
-            else {
-                return lhs.relevance > rhs.relevance;
-            }
-        });
-    if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
-        matched_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
-    }
-    return matched_documents;
-}
+    //LOG_DURATION_STREAM(__func__, std::cout); {
+        //std::cout << raw_query << std::endl;
+        const QueryContent query = ParseQuery(raw_query);
+        std::vector<Document> matched_documents = FindAllDocuments(query, predicate);
+        sort(matched_documents.begin(), matched_documents.end(),
+            [predicate](const Document& lhs, const Document& rhs) {
+                if (std::abs(lhs.relevance - rhs.relevance) < ALLOWABLE_ERROR) {
+                    return lhs.rating > rhs.rating;
+                }
+                else {
+                    return lhs.relevance > rhs.relevance;
+                }
+            });
+        if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
+            matched_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
+        }
+        return matched_documents;
+    //}
 }
 
 template <typename Predicate>
@@ -150,3 +160,6 @@ std::set<std::string> SearchServer::SplitInputStringsContainerIntoStrings(const 
     }
     return result;
 }
+
+void AddDocument(SearchServer& search_server, int document_id, const std::string& raw_query, DocumentStatus status,
+    const std::vector<int>& ratings);

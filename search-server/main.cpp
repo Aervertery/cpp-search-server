@@ -1,39 +1,54 @@
-#include "search_server.h"
-#include "request_queue.h"
-#include "paginator.h"
+#include "test_example_functions.h"
 
 using namespace std; //Подключил пространство имён, чтобы прошли тесты тренажёра. Программа работает и без этого
 
 int main() {
-    SearchServer search_server("and in at"s);
-    RequestQueue request_queue(search_server);
-    search_server.AddDocument(1, "curly cat curly tail"s, DocumentStatus::ACTUAL, { 7, 2, 7 });
-    search_server.AddDocument(2, "curly dog and fancy collar"s, DocumentStatus::ACTUAL, { 1, 2, 3 });
-    search_server.AddDocument(3, "big cat fancy collar "s, DocumentStatus::ACTUAL, { 1, 2, 8 });
-    search_server.AddDocument(4, "big dog sparrow Eugene"s, DocumentStatus::ACTUAL, { 1, 3, 2 });
-    search_server.AddDocument(5, "big dog sparrow Vasiliy"s, DocumentStatus::ACTUAL, { 1, 1, 1 });
-    /*r(int i = 0; i < 1439; ++i) {
-        request_queue.AddFindRequest("empty request"s);
-    }
-    request_queue.AddFindRequest("curly dog"s);
-    request_queue.AddFindRequest("big collar"s);
-    request_queue.AddFindRequest("sparrow"s);*/
-    std::cout << "Total empty requests: "s << request_queue.GetNoResultRequests() << std::endl;
+    SearchServer search_server("and with"s);
+
+    AddDocument(search_server, 10, "funny pet and nasty rat"s, DocumentStatus::ACTUAL, { 7, 2, 7 });
+    AddDocument(search_server, 2, "funny pet with curly hair"s, DocumentStatus::ACTUAL, { 1, 2 });
+
+    // дубликат документа 2, будет удалён
+    AddDocument(search_server, 3, "funny pet with curly hair"s, DocumentStatus::ACTUAL, { 1, 2 });
+
+    // отличие только в стоп-словах, считаем дубликатом
+    AddDocument(search_server, 4, "funny pet and curly hair"s, DocumentStatus::ACTUAL, { 1, 2 });
+
+    // множество слов такое же, считаем дубликатом документа 1
+    AddDocument(search_server, 5, "funny funny pet and nasty nasty rat"s, DocumentStatus::ACTUAL, { 1, 2 });
+
+    // добавились новые слова, дубликатом не является
+    AddDocument(search_server, 6, "funny pet and not very nasty rat"s, DocumentStatus::ACTUAL, { 1, 2 });
+
+    // множество слов такое же, как в id 6, несмотря на другой порядок, считаем дубликатом
+    AddDocument(search_server, 7, "very nasty rat and not very funny pet"s, DocumentStatus::ACTUAL, { 1, 2 });
+
+    // есть не все слова, не является дубликатом
+    AddDocument(search_server, 8, "pet with rat and rat and rat"s, DocumentStatus::ACTUAL, { 1, 2 });
+
+    // слова из разных документов, не является дубликатом
+    AddDocument(search_server, 9, "nasty rat with curly hair"s, DocumentStatus::ACTUAL, { 1, 2 });
+
+    AddDocument(search_server, 11, "nasty rat with curly hair"s, DocumentStatus::ACTUAL, { 1, 2 });
+
+
     int page_size = 2;
-    auto search_results = search_server.FindTopDocuments("big curly cat"s);
+    auto search_results = search_server.FindTopDocuments("funny curly rat"s);
     const auto pages = Paginate(search_results, page_size);
     for (auto page = pages.begin(); page != pages.end(); ++page) {
         std::cout << *page << std::endl;
         std::cout << "Page break"s << std::endl;
     }
-    return 0;
-}
 
-//TODO: вместо GetDocumentId сделать возвращающие итераторы методы begin(), end() для получения доступа к id всех документов
-//метод получения частоты слов по id документа const map<string, double>& GetWordFrequencies(int document_id) const получаем id, возвращаем словарь слово -> количество повторений этого слова в документе / на количество
-//слов в документе. Если документа нет, вернуть пустой словарь
-//Метод удаления документов из сервера  void RemoveDocument(int document_id). При удалении обновить documents_freqs_
-//В remove_deduplicates.h сделать метод для поиска и удаления документов  void RemoveDuplicates(SearchServer& search_server). Полное повторение набора слов, количество повторений не имеет значения, стоп-слова игнорируются. 
-//При удалении должно выводиться сообщение вида "Found duplicate document id 7"
-//В DocumentData добавить set<string> со словами из этого документа
- 
+    std::cout << "Before duplicates removed: "s << search_server.GetDocumentCount() << std::endl;
+    RemoveDuplicates(search_server);
+    std::cout << "After duplicates removed: "s << search_server.GetDocumentCount() << std::endl;
+
+
+    auto search_results2 = search_server.FindTopDocuments("funny curly rat"s);
+    const auto pages2 = Paginate(search_results2, page_size);
+    for (auto page = pages2.begin(); page != pages2.end(); ++page) {
+        std::cout << *page << std::endl;
+        std::cout << "Page break"s << std::endl;
+    }
+}

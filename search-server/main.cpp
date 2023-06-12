@@ -1,3 +1,11 @@
+#include <algorithm>
+#include <iostream>
+#include <random>
+#include <string>
+#include <string_view>
+#include <functional>
+#include <numeric>
+#include <execution>
 #include "test_example_functions.h"
 
 using namespace std; //Подключил пространство имён, чтобы прошли тесты тренажёра. Программа работает и без этого

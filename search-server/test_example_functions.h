@@ -3,6 +3,7 @@
 #include "search_server.h"
 #include "remove_duplicates.h"
 #include "request_queue.h"
+#include "process_queries.h"
 
 template <typename T, typename U>
 void AssertEqualImpl(const T& t, const U& u, const std::string& t_str, const std::string& u_str, const std::string& file,

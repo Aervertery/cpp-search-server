@@ -2,6 +2,7 @@
 #include <cmath>
 #include <map>
 #include <algorithm>
+#include <execution>
 #include "document.h"
 #include "read_input_functions.h"
 #include "string_processing.h"
@@ -44,16 +45,19 @@ public:
     const std::map<std::string, double>& GetWordFrequencies(int document_id) const;
 
     void RemoveDocument(int document_id);
+
+    template <typename ExecutionPolicy>
+    void RemoveDocument(ExecutionPolicy&& policy, int document_id);
 private:
     struct DocumentData {
         int rating;
         DocumentStatus status;
-        std::map<std::string, double> word_frequencies;
+        std::map<std::string, double> word_frequencies; //словарь слово из документа -> частота появления этого слова в этом документе
     };
 
     std::map<std::string, std::map<int, double>> documents_freqs_; //словарь слово -> (словарь id документа -> Term frequency слова в этом документе)
-    std::set<std::string> stop_words_;
-    std::map<int, DocumentData> documents_;
+    std::set<std::string> stop_words_; 
+    std::map<int, DocumentData> documents_; //словарь номер документа -> информация о документе
     std::set<int> documents_ids_;
 
     struct QueryContent {
@@ -158,6 +162,36 @@ std::set<std::string> SearchServer::SplitInputStringsContainerIntoStrings(const 
         }
     }
     return result;
+}
+
+template <typename ExecutionPolicy>
+void SearchServer::RemoveDocument(ExecutionPolicy&& policy, int document_id) {
+    if (documents_ids_.count(document_id) == 0) {
+        return;
+    }
+    documents_ids_.erase(document_id);
+    //switch (policy)
+    //{
+        //case std::execution::sequenced_policy:
+        if constexpr(std::is_same_v<std::decay_t<ExecutionPolicy>, std::execution::sequenced_policy>) {
+            RemoveDocument(document_id);
+        }
+        //case std::execution::parallel_policy:
+        else {
+            std::vector<const std::string*> words(documents_.at(document_id).word_frequencies.size());
+            //words.reserve(documents_.at(document_id).word_frequencies.size());
+            std::transform(std::execution::par,
+                           documents_.at(document_id).word_frequencies.begin(), documents_.at(document_id).word_frequencies.end(),
+                           words.begin(),
+                           [&](const auto& element) { return &(element.first); });
+            std::for_each(std::execution::par,
+                          words.begin(), words.end(),
+                          [&](const std::string* word) { auto it = documents_.find(document_id);
+                                                         documents_freqs_[*word].erase(documents_freqs_[*word].find(it->first)); });
+        }
+    //}
+    documents_.erase(document_id);
+    return;
 }
 
 void AddDocument(SearchServer& search_server, int document_id, const std::string& raw_query, DocumentStatus status,

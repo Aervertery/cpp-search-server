@@ -39,18 +39,17 @@ std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument
         //std::cout << raw_query << std::endl;
         const QueryContent query = ParseQuery(raw_query);
         std::vector<std::string> matched_words;
+        for (const std::string& word : query.minus_words_) {
+            if (documents_freqs_.count(word) != 0) {
+                if (documents_freqs_.at(word).count(document_id)) {
+                    return { matched_words, documents_.at(document_id).status };
+                }
+            }
+        }
         for (const std::string& word : query.plus_words_) {
             if (documents_freqs_.count(word) != 0) {
                 if (documents_freqs_.at(word).count(document_id)) {
                     matched_words.push_back(word);
-                }
-            }
-        }
-        for (const std::string& word : query.minus_words_) {
-            if (documents_freqs_.count(word) != 0) {
-                if (documents_freqs_.at(word).count(document_id)) {
-                    matched_words.clear();
-                    break;
                 }
             }
         }
@@ -93,18 +92,22 @@ std::vector<std::string> SearchServer::SplitIntoWordsNoStop(const std::string& t
     return words;
 }
 
-SearchServer::QueryContent SearchServer::ParseQuery(const std::string& text) const {
+SearchServer::QueryContent SearchServer::ParseQuery(const std::string& text, bool if_par) const {
     QueryContent query;
     for (std::string& word : SplitIntoWords(text)) {
         QueryWordContent element = IsMinusWord(word);
         if (!element.IsStop) {
             if (element.IsMinus) {
-                query.minus_words_.insert(element.word);
+                query.minus_words_.push_back(element.word);
             }
             else {
-                query.plus_words_.insert(element.word);
+                query.plus_words_.push_back(element.word);
             }
         }
+    }
+    if (!if_par) {
+        RemoveDuplicates(query.plus_words_);
+        RemoveDuplicates(query.minus_words_);
     }
     return query;
 }
@@ -154,5 +157,10 @@ void SearchServer::RemoveDocument(int document_id) {
 void AddDocument(SearchServer& search_server, int document_id, const std::string& raw_query, DocumentStatus status,
     const std::vector<int>& ratings) {
     search_server.AddDocument(document_id, raw_query, status, ratings);
+}
+
+void SearchServer::RemoveDuplicates(std::vector<std::string>& words) const {
+    std::sort(words.begin(), words.end());
+    words.erase(std::unique(words.begin(), words.end()), words.end());
 }
 

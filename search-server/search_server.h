@@ -38,6 +38,10 @@ public:
     std::tuple<std::vector<std::string>, DocumentStatus> MatchDocument(const std::string& raw_query,
         int document_id) const;
 
+    template <typename ExecutionPolicy>
+    std::tuple<std::vector<std::string>, DocumentStatus> MatchDocument(ExecutionPolicy&& policy, const std::string& raw_query,
+        int document_id) const;
+
     std::set<int>::const_iterator begin() const;
 
     std::set<int>::const_iterator end() const;
@@ -61,8 +65,8 @@ private:
     std::set<int> documents_ids_;
 
     struct QueryContent {
-        std::set<std::string> plus_words_;
-        std::set<std::string> minus_words_;
+        std::vector<std::string> plus_words_;
+        std::vector<std::string> minus_words_;
     };
 
     struct QueryWordContent {
@@ -82,7 +86,7 @@ private:
 
     std::vector<std::string> SplitIntoWordsNoStop(const std::string& text) const;
 
-    QueryContent ParseQuery(const std::string& text) const;
+    QueryContent ParseQuery(const std::string& text, bool if_par = false) const;
 
     double ComputeIdf(const std::string& word) const;
 
@@ -90,6 +94,8 @@ private:
 
     template <typename Predicate>
     std::vector<Document> FindAllDocuments(const QueryContent& query, Predicate predicate) const;
+
+    void RemoveDuplicates(std::vector<std::string>& words) const;
 };
 
 template <typename StringContainer>
@@ -165,31 +171,57 @@ std::set<std::string> SearchServer::SplitInputStringsContainerIntoStrings(const 
 }
 
 template <typename ExecutionPolicy>
+std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument(ExecutionPolicy&& policy, const std::string& raw_query,
+    int document_id) const {
+    //LOG_DURATION_STREAM(__func__, std::cout); {
+        //std::cout << raw_query << std::endl;
+    std::vector<std::string> matched_words;
+    if constexpr (std::is_same_v<std::decay_t<ExecutionPolicy>, std::execution::sequenced_policy>) {
+        return MatchDocument(raw_query, document_id);
+    }
+    else {
+        const QueryContent query = ParseQuery(raw_query, true);
+        if (std::any_of(std::execution::par,
+            query.minus_words_.begin(), query.minus_words_.end(),
+            [&](const std::string& word) {
+                return documents_freqs_.count(word) != 0 && documents_freqs_.at(word).count(document_id);
+            })) {
+                    return { matched_words, documents_.at(document_id).status };
+        }
+        matched_words.resize(query.plus_words_.size());
+        auto it = std::copy_if(std::execution::par,
+                     query.plus_words_.begin(), query.plus_words_.end(),
+                     matched_words.begin(),
+                     [&](const std::string& word) {
+                        return documents_freqs_.count(word) != 0 && documents_freqs_.at(word).count(document_id);
+                     });
+        std::sort(std::execution::par, matched_words.begin(), it);
+        matched_words.erase(std::unique(matched_words.begin(), it), matched_words.end());
+    }
+    return { matched_words, documents_.at(document_id).status };
+    //}
+}
+
+template <typename ExecutionPolicy>
 void SearchServer::RemoveDocument(ExecutionPolicy&& policy, int document_id) {
     if (documents_ids_.count(document_id) == 0) {
         return;
     }
     documents_ids_.erase(document_id);
-    //switch (policy)
-    //{
-        //case std::execution::sequenced_policy:
-        if constexpr(std::is_same_v<std::decay_t<ExecutionPolicy>, std::execution::sequenced_policy>) {
-            RemoveDocument(document_id);
-        }
-        //case std::execution::parallel_policy:
-        else {
-            std::vector<const std::string*> words(documents_.at(document_id).word_frequencies.size());
-            //words.reserve(documents_.at(document_id).word_frequencies.size());
-            std::transform(std::execution::par,
-                           documents_.at(document_id).word_frequencies.begin(), documents_.at(document_id).word_frequencies.end(),
-                           words.begin(),
-                           [&](const auto& element) { return &(element.first); });
-            std::for_each(std::execution::par,
-                          words.begin(), words.end(),
-                          [&](const std::string* word) { auto it = documents_.find(document_id);
-                                                         documents_freqs_[*word].erase(documents_freqs_[*word].find(it->first)); });
-        }
-    //}
+    if constexpr(std::is_same_v<std::decay_t<ExecutionPolicy>, std::execution::sequenced_policy>) {
+        RemoveDocument(document_id);
+    }
+    else {
+        std::vector<const std::string*> words(documents_.at(document_id).word_frequencies.size());
+        std::transform(std::execution::par,
+                       documents_[document_id].word_frequencies.begin(), documents_[document_id].word_frequencies.end(),
+                       words.begin(),
+                       [&](const auto& element) { return &(element.first); });
+        std::for_each(std::execution::par,
+                      words.begin(), words.end(),
+                      [&](const std::string* word) { auto it = documents_.find(document_id);
+                                                     documents_freqs_[*word].erase(documents_freqs_[*word].find(it->first)); });
+    }
     documents_.erase(document_id);
     return;
 }

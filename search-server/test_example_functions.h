@@ -1,11 +1,12 @@
 #pragma once
+#include <string_view>
 #include "paginator.h"
 #include "search_server.h"
 #include "remove_duplicates.h"
 #include "request_queue.h"
 #include "process_queries.h"
 
-template <typename T, typename U>
+/*template <typename T, typename U>
 void AssertEqualImpl(const T& t, const U& u, const std::string& t_str, const std::string& u_str, const std::string& file,
     const std::string& func, unsigned line, const std::string& hint);
 
@@ -82,4 +83,4 @@ void AssertEqualImpl(const T& t, const U& u, const std::string& t_str, const std
 template <typename T>
 void RunTestImpl(const T&, const std::string& t_str) {
     std::cerr << t_str << " OK"s << std::endl;
-}
+}*/

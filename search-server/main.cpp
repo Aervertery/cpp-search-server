@@ -114,28 +114,28 @@ int main() {
         search_server.AddDocument(++id, text, DocumentStatus::ACTUAL, { 1, 2 });
     }
 
-    const string query = "curly and funny -not funny curly"s;
+    std::string query = "curly and funny -not funny curly"s;
 
     {
-        const auto [words, status] = search_server.MatchDocument(query, 1);
+        auto [words, status] = search_server.MatchDocument(query, 1);
         cout << words.size() << " words for document 1"s << endl;
         // 1 words for document 1
     }
 
     {
-        const auto [words, status] = search_server.MatchDocument(execution::seq, query, 2);
+        auto [words, status] = search_server.MatchDocument(execution::seq, query, 2);
         cout << words.size() << " words for document 2"s << endl;
         // 2 words for document 2
     }
 
     {
-        const auto [words, status] = search_server.MatchDocument(execution::par, query, 3);
+        auto [words, status] = search_server.MatchDocument(execution::par, query, 3);
         cout << words.size() << " words for document 3"s << endl;
         // 0 words for document 3
     }
 
     {
-        const auto [words, status] = search_server.MatchDocument(execution::par, query, 2);
+        auto [words, status] = search_server.MatchDocument(execution::par, query, 2);
         cout << words.size() << " words for document 2"s << endl;
         // 2 words for document 2
     }

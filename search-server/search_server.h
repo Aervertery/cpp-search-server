@@ -29,24 +29,24 @@ public:
     //void AddDocument(int document_id, const std::string& document, DocumentStatus status,
         //const std::vector<int>& ratings);
 
-    void AddDocument(int document_id, const std::string_view& document_, DocumentStatus status,
+    void AddDocument(int document_id, std::string_view document_, DocumentStatus status,
         const std::vector<int>& ratings);
 
-    //template <typename Predicate>
-    //std::vector<Document> FindTopDocuments(const std::string& raw_query,
-        //Predicate predicate) const;
-
-    //std::vector<Document> FindTopDocuments(const std::string& raw_query) const;
-
-    //std::vector<Document> FindTopDocuments(const std::string& raw_query, DocumentStatus status) const;
-
-    template <typename Predicate>
-    std::vector<Document> FindTopDocuments(const std::string_view& raw_query,
+    /*template <typename Predicate>
+    std::vector<Document> FindTopDocuments(const std::string& raw_query,
         Predicate predicate) const;
 
-    std::vector<Document> FindTopDocuments(const std::string_view& raw_query) const;
+    std::vector<Document> FindTopDocuments(const std::string& raw_query) const;
 
-    std::vector<Document> FindTopDocuments(const std::string_view& raw_query, DocumentStatus status) const;
+    std::vector<Document> FindTopDocuments(const std::string& raw_query, DocumentStatus status) const;*/
+
+    template <typename Predicate>
+    std::vector<Document> FindTopDocuments(std::string_view raw_query,
+        Predicate predicate) const;
+
+    std::vector<Document> FindTopDocuments(std::string_view raw_query) const;
+
+    std::vector<Document> FindTopDocuments(std::string_view raw_query, DocumentStatus status) const;
 
     size_t GetDocumentCount() const;
 
@@ -57,7 +57,7 @@ public:
     //std::tuple<std::vector<std::string>, DocumentStatus> MatchDocument(ExecutionPolicy&& policy, const std::string& raw_query,
         //int document_id) const;
 
-    std::tuple<std::vector<std::string_view>, DocumentStatus> MatchDocument(const std::string_view& raw_query,
+    std::tuple<std::vector<std::string_view>, DocumentStatus> MatchDocument(std::string_view raw_query,
         int document_id) const;
 
     template <typename ExecutionPolicy>
@@ -158,7 +158,7 @@ std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_quer
 }*/
 
 template <typename Predicate>
-std::vector<Document> SearchServer::FindTopDocuments(const std::string_view& raw_query,
+std::vector<Document> SearchServer::FindTopDocuments(std::string_view raw_query,
     Predicate predicate) const {
     //LOG_DURATION_STREAM(__func__, std::cout); {
         //std::cout << raw_query << std::endl;

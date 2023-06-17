@@ -23,7 +23,7 @@ SearchServer::SearchServer(const std::string_view& text) : SearchServer(SplitInt
     //const std::set<std::string> words_ = std::set(words.begin(), words.end());
 }*/
 
-void SearchServer::AddDocument(int document_id, const std::string_view& document_, DocumentStatus status,
+void SearchServer::AddDocument(int document_id, std::string_view document_, DocumentStatus status,
     const std::vector<int>& ratings) {
     storage.emplace_back(document_);
     if (document_id < 0 || documents_.count(document_id) != 0 || !IsValidWord(storage.back())) {
@@ -50,11 +50,11 @@ std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_quer
         return status_ == status; });
 }*/
 
-std::vector<Document> SearchServer::FindTopDocuments(const std::string_view& raw_query) const {
+std::vector<Document> SearchServer::FindTopDocuments(std::string_view raw_query) const {
     return FindTopDocuments(raw_query, DocumentStatus::ACTUAL);
 }
 
-std::vector<Document> SearchServer::FindTopDocuments(const std::string_view& raw_query, DocumentStatus status) const {
+std::vector<Document> SearchServer::FindTopDocuments(std::string_view raw_query, DocumentStatus status) const {
     return FindTopDocuments(raw_query, [status](int document_id, DocumentStatus status_, int rating) {
         return status_ == status; });
 }
@@ -87,7 +87,7 @@ size_t SearchServer::GetDocumentCount() const {
     //}
 }*/
 
-std::tuple<std::vector<std::string_view>, DocumentStatus> SearchServer::MatchDocument(const std::string_view& raw_query,
+std::tuple<std::vector<std::string_view>, DocumentStatus> SearchServer::MatchDocument(std::string_view raw_query,
     int document_id) const {
     //LOG_DURATION_STREAM(__func__, std::cout); {
         //std::cout << raw_query << std::endl;

@@ -1,6 +1,6 @@
 #include "test_example_functions.h"
 
-/*#define ASSERT_EQUAL(a, b) AssertEqualImpl((a), (b), #a, #b, __FILE__, __FUNCTION__, __LINE__, ""s)
+#define ASSERT_EQUAL(a, b) AssertEqualImpl((a), (b), #a, #b, __FILE__, __FUNCTION__, __LINE__, ""s)
 
 #define ASSERT_EQUAL_HINT(a, b, hint) AssertEqualImpl((a), (b), #a, #b, __FILE__, __FUNCTION__, __LINE__, (hint))
 
@@ -30,7 +30,7 @@ void TestExcludeStopWordsFromAddedDocumentContent() {
     const std::vector<int> ratings = { 1, 2, 3 };
     {
         SearchServer server(""s);
-        AddDocument(server, doc_id, content, DocumentStatus::ACTUAL, ratings);
+        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
         const auto found_docs = server.FindTopDocuments("in"s);
         ASSERT_EQUAL(found_docs.size(), 1u);
         const Document& doc0 = found_docs[0];
@@ -39,7 +39,7 @@ void TestExcludeStopWordsFromAddedDocumentContent() {
 
     {
         SearchServer server("in the"s);
-        AddDocument(server, doc_id, content, DocumentStatus::ACTUAL, ratings);
+        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
         ASSERT_HINT(server.FindTopDocuments("in"s).empty(),
             "Stop words must be excluded from documents"s);
     }
@@ -53,7 +53,7 @@ void TestAddingDocument() {
     const std::vector<int> ratings = { 1, 2, 3 };
     {
         SearchServer server("in the"s);
-        AddDocument(server, doc_id, content, DocumentStatus::ACTUAL, ratings);
+        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
         const auto found = server.FindTopDocuments("purple"s);
         ASSERT_EQUAL(found.size(), 1);
         const auto found1 = server.FindTopDocuments("dog"s);
@@ -75,8 +75,8 @@ void TestMinusWords() {
     const std::vector<int> ratings2 = { 1, 2, 3 };
     {
         SearchServer server("in the"s);
-        AddDocument(server, doc_id, content, DocumentStatus::ACTUAL, ratings);
-        AddDocument(server, doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
+        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+        server.AddDocument(doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
         const auto found = server.FindTopDocuments("purple -dog"s);
         ASSERT_EQUAL(found.size(), 1);
         const auto found1 = server.FindTopDocuments("dog"s);
@@ -96,8 +96,8 @@ void TestDocumentMatching() {
     const std::vector<int> ratings2 = { 1, 2, 3 };
     {
         SearchServer server("in the"s);
-        AddDocument(server, doc_id, content, DocumentStatus::ACTUAL, ratings);
-        AddDocument(server, doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
+        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+        server.AddDocument(doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
         const auto found0 = server.MatchDocument("purple -cat"s, doc_id);
         const auto found01 = std::get<0>(found0);
         ASSERT_EQUAL(found01.size(), 0);
@@ -123,8 +123,8 @@ void TestDocumentSorting() {
     const std::vector<int> ratings2 = { 1, 2, 3 };
     {
         SearchServer server("in the"s);
-        AddDocument(server, doc_id, content, DocumentStatus::ACTUAL, ratings);
-        AddDocument(server, doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
+        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+        server.AddDocument(doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
         const auto found = server.FindTopDocuments("purple dog"s);
         ASSERT(found[0].relevance > found[1].relevance);
     }
@@ -140,8 +140,8 @@ void TestComputeDocumentRating() {
     const std::vector<int> ratings2 = { 1, -1, 3 };
     {
         SearchServer server("in the"s);
-        AddDocument(server, doc_id, content, DocumentStatus::ACTUAL, ratings);
-        AddDocument(server, doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
+        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+        server.AddDocument(doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
         const auto found = server.FindTopDocuments("purple dog"s);
         ASSERT_EQUAL(found[0].rating, 1);
         ASSERT_EQUAL(found[1].rating, 2);
@@ -158,8 +158,8 @@ void TestDocumentFilterUsingPredicate() {
     const std::vector<int> ratings2 = { 1, -1, 3 };
     {
         SearchServer server("in the"s);
-        AddDocument(server, doc_id, content, DocumentStatus::ACTUAL, ratings);
-        AddDocument(server, doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
+        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+        server.AddDocument(doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
         const auto found = server.FindTopDocuments("purple dog"s, [](int document_id, DocumentStatus status, int rating)
             { return document_id % 2 == 0; });
         ASSERT_EQUAL(found[0].id, 42);
@@ -183,13 +183,13 @@ void TestDocumentSearchWithCertainStatus() {
     const int doc_id3 = 44;
     {
         SearchServer server("in the"s);
-        AddDocument(server, doc_id, content, DocumentStatus::ACTUAL, ratings);
-        AddDocument(server, doc_id2, content2, DocumentStatus::BANNED, ratings2);
+        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+        server.AddDocument(doc_id2, content2, DocumentStatus::BANNED, ratings2);
         const auto found = server.FindTopDocuments("purple dog"s, DocumentStatus::BANNED);
         ASSERT_EQUAL(found.size(), 1);
         const auto found0 = server.FindTopDocuments("purple cat"s, DocumentStatus::ACTUAL);
         ASSERT_EQUAL(found0.size(), 1);
-        AddDocument(server, doc_id3, content2, DocumentStatus::BANNED, ratings2);
+        server.AddDocument(doc_id3, content2, DocumentStatus::BANNED, ratings2);
         const auto found1 = server.FindTopDocuments("purple dog"s, DocumentStatus::BANNED);
         ASSERT_EQUAL(found1.size(), 2);
         const auto found2 = server.FindTopDocuments("purple dog"s, DocumentStatus::IRRELEVANT);
@@ -209,8 +209,8 @@ void TestComputeDocumentRelevance() {
     const std::vector<int> ratings2 = { 1, -1, 3 };
     {
         SearchServer server("in the"s);
-        AddDocument(server, doc_id, content, DocumentStatus::ACTUAL, ratings);
-        AddDocument(server, doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
+        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+        server.AddDocument(doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
         const auto found = server.FindTopDocuments("purple dog");
         ASSERT_EQUAL(found[1].relevance, 0.0);
         ASSERT_EQUAL(found[0].relevance, log(2) * 0.25);
@@ -227,17 +227,17 @@ void TestPaginate() {
     const std::vector<int> ratings2 = { 1, -1, 3 };
     {
         SearchServer server("in the"s);
-        AddDocument(server, doc_id, content, DocumentStatus::ACTUAL, ratings);
-        AddDocument(server, doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
+        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+        server.AddDocument(doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
         const auto found1 = server.FindTopDocuments("purple dog");
         const auto pages1 = Paginate(found1, 1);
         ASSERT_EQUAL(pages1.size(), 2);
-        AddDocument(server, 44, content2, DocumentStatus::ACTUAL, ratings2);
+        server.AddDocument(44, content2, DocumentStatus::ACTUAL, ratings2);
         const auto found2 = server.FindTopDocuments("purple dog");
         const auto pages2 = Paginate(found2, 2);
         ASSERT_EQUAL(pages2.size(), 2);
-        AddDocument(server, 45, content2, DocumentStatus::ACTUAL, ratings2);
-        AddDocument(server, 46, content2, DocumentStatus::ACTUAL, ratings2);
+        server.AddDocument(45, content2, DocumentStatus::ACTUAL, ratings2);
+        server.AddDocument(46, content2, DocumentStatus::ACTUAL, ratings2);
         const auto found3 = server.FindTopDocuments("purple dog");
         const auto pages3 = Paginate(found3, 2);
         ASSERT_EQUAL(pages3.size(), 3);
@@ -257,9 +257,9 @@ void TestRemoveDocument() {
     const std::vector<int> ratings3 = { 10, 10, 10 };
     {
         SearchServer server("in the and"s);
-        AddDocument(server, doc_id, content, DocumentStatus::ACTUAL, ratings);
-        AddDocument(server, doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
-        AddDocument(server, doc_id3, content3, DocumentStatus::ACTUAL, ratings3);
+        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+        server.AddDocument(doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
+        server.AddDocument(doc_id3, content3, DocumentStatus::ACTUAL, ratings3);
         const auto found1 = server.FindTopDocuments("cat orange eyes");
         ASSERT_EQUAL(found1.size(), 2);
         server.RemoveDocument(42);
@@ -278,8 +278,8 @@ void TestGetWordFrequencies() {
     const std::vector<int> ratings2 = { 1, -1, 3 };
     {
         SearchServer server("in the and"s);
-        AddDocument(server, doc_id, content, DocumentStatus::ACTUAL, ratings);
-        AddDocument(server, doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
+        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+        server.AddDocument(doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
         const auto found1 = server.GetWordFrequencies(42);
         ASSERT_EQUAL(found1.size(), 3);
         ASSERT_EQUAL(found1.at("purple"s), 2.0 / 4.0);
@@ -292,7 +292,7 @@ void TestGetWordFrequencies() {
 }
 
 //Тест проверяет корректное удаление документов-дубликатов из базы
-void TestRemoveDuplicates() {
+/*void TestRemoveDuplicates() {
     const int doc_id = 42;
     const std::string content = "purple cat purple eyes"s;
     const std::vector<int> ratings = { 1, 2, 3 };
@@ -304,21 +304,21 @@ void TestRemoveDuplicates() {
     const std::vector<int> ratings3 = { 1, -1, 3 };
     {
         SearchServer server("in the and"s);
-        AddDocument(server, doc_id, content, DocumentStatus::ACTUAL, ratings);
-        AddDocument(server, doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
+        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+        server.AddDocument(doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
         const auto found1 = server.FindTopDocuments("purple dog"s);
         ASSERT_EQUAL(found1.size(), 2);
         RemoveDuplicates(server);
         const auto found2 = server.FindTopDocuments("purple dog"s);
         ASSERT_EQUAL(found2.size(), 2);
-        AddDocument(server, doc_id3, content3, DocumentStatus::ACTUAL, ratings3);
+        server.AddDocument(doc_id3, content3, DocumentStatus::ACTUAL, ratings3);
         const auto found3 = server.FindTopDocuments("purple dog"s);
         ASSERT_EQUAL(found3.size(), 3);
         RemoveDuplicates(server);
         const auto found4 = server.FindTopDocuments("purple dog"s);
         ASSERT_EQUAL(found4.size(), 2);
     }
-}
+}*/
 
 //Тест проверяет корректную работу очереди запросов
 void TestRequestQueue() {
@@ -335,8 +335,8 @@ void TestRequestQueue() {
             queue.AddFindRequest("empty request"s);
         }
         ASSERT_EQUAL(queue.GetNoResultRequests(), 1440);
-        AddDocument(server, doc_id, content, DocumentStatus::ACTUAL, ratings);
-        AddDocument(server, doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
+        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+        server.AddDocument(doc_id2, content2, DocumentStatus::ACTUAL, ratings2);
         queue.AddFindRequest("black cat white tail"s);
         queue.AddFindRequest("purple dog badge courage");
         ASSERT_EQUAL(queue.GetNoResultRequests(), 1438);
@@ -357,6 +357,6 @@ void TestSearchServer() {
     RUN_TEST(TestPaginate);
     RUN_TEST(TestRemoveDocument);
     RUN_TEST(TestGetWordFrequencies);
-    RUN_TEST(TestRemoveDuplicates);
+    //RUN_TEST(TestRemoveDuplicates);
     RUN_TEST(TestRequestQueue);
-}*/
+}

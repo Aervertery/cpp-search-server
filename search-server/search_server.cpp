@@ -237,7 +237,7 @@ void SearchServer::RemoveDocument(int document_id) {
     return ;
 }
 
-void AddDocument(SearchServer& search_server, int document_id, const std::string_view& raw_query, DocumentStatus status,
+void AddDocument(SearchServer& search_server, int document_id, std::string_view raw_query, DocumentStatus status,
     const std::vector<int>& ratings) {
     search_server.AddDocument(document_id, raw_query, status, ratings);
 }

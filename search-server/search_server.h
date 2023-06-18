@@ -2,6 +2,7 @@
 #include <cmath>
 #include <deque>
 #include <map>
+#include <string>
 #include <string_view>
 #include <algorithm>
 #include <execution>
@@ -55,8 +56,10 @@ public:
     MatchedDocument MatchDocument(std::string_view raw_query,
         int document_id) const;
 
-    template <typename ExecutionPolicy>
-    MatchedDocument MatchDocument(ExecutionPolicy&& policy, std::string_view raw_query,
+    MatchedDocument MatchDocument(Sequenced, std::string_view raw_query,
+        int document_id) const;
+
+    MatchedDocument MatchDocument(Parallel, std::string_view raw_query,
         int document_id) const;
 
     std::set<int>::const_iterator begin() const;
@@ -67,8 +70,9 @@ public:
 
     void RemoveDocument(int document_id);
 
-    template <typename ExecutionPolicy>
-    void RemoveDocument(ExecutionPolicy&& policy, int document_id);
+    void RemoveDocument(Sequenced, int document_id);
+
+    void RemoveDocument(Parallel, int document_id);
 private:
     struct DocumentData {
         int rating;
@@ -111,10 +115,10 @@ private:
     static int ComputeAverageRating(const std::vector<int>& ratings);
 
     template <typename Predicate>
-    std::vector<Document> FindAllDocuments(std::execution::sequenced_policy, const QueryContent& query, Predicate predicate) const;
+    std::vector<Document> FindAllDocuments(Sequenced, const QueryContent& query, Predicate predicate) const;
 
     template <typename Predicate>
-    std::vector<Document> FindAllDocuments(std::execution::parallel_policy, const QueryContent& query, Predicate predicate) const;
+    std::vector<Document> FindAllDocuments(Parallel, const QueryContent& query, Predicate predicate) const;
 
     void RemoveDuplicatesWords(std::vector<std::string_view>& words) const;
 };
@@ -163,7 +167,7 @@ std::vector<Document> SearchServer::FindTopDocuments(ExecutionPolicy&& policy, s
 }
 
 template < typename Predicate>
-std::vector<Document> SearchServer::FindAllDocuments(std::execution::sequenced_policy, const QueryContent& query, Predicate predicate) const {
+std::vector<Document> SearchServer::FindAllDocuments(Sequenced, const QueryContent& query, Predicate predicate) const {
     std::map<int, double> document_to_relevance;
     for (std::string_view word : query.plus_words_) {
         if (documents_freqs_.count(word) != 0) {
@@ -192,7 +196,7 @@ std::vector<Document> SearchServer::FindAllDocuments(std::execution::sequenced_p
 }
 
 template <typename Predicate>
-std::vector<Document> SearchServer::FindAllDocuments(std::execution::parallel_policy, const QueryContent& query, Predicate predicate) const {
+std::vector<Document> SearchServer::FindAllDocuments(Parallel, const QueryContent& query, Predicate predicate) const {
         ConcurrentMap<int, double> doc_to_relev_concur(1000);
         std::for_each(std::execution::par, query.plus_words_.begin(), query.plus_words_.end(), [&](std::string_view word) {
             if (documents_freqs_.count(word) != 0) {
@@ -231,59 +235,6 @@ std::set<std::string, std::less<>> SearchServer::SplitInputStringsContainerIntoS
         }
     }
     return result;
-}
-
-template <typename ExecutionPolicy>
-MatchedDocument SearchServer::MatchDocument(ExecutionPolicy&& policy, std::string_view raw_query,
-    int document_id) const {
-    std::vector<std::string_view> matched_words;
-    if constexpr (std::is_same_v<std::decay_t<ExecutionPolicy>, std::execution::sequenced_policy>) {
-        return MatchDocument(raw_query, document_id);
-    }
-    else {
-        const QueryContent query = ParseQuery(raw_query, true);
-        if (std::any_of(policy,
-            query.minus_words_.begin(), query.minus_words_.end(),
-            [&](std::string_view word) {
-                return documents_freqs_.count(word) != 0 && documents_freqs_.at(word).count(document_id);
-            })) {
-            return { matched_words, documents_.at(document_id).status };
-        }
-        matched_words.resize(query.plus_words_.size());
-        auto it = std::copy_if(policy,
-            query.plus_words_.begin(), query.plus_words_.end(),
-            matched_words.begin(),
-            [&](std::string_view word) {
-                return documents_freqs_.count(word) != 0 && documents_freqs_.at(word).count(document_id);
-            });
-        std::sort(policy, matched_words.begin(), it);
-        matched_words.erase(std::unique(policy, matched_words.begin(), it), matched_words.end());
-    }
-    return { matched_words, documents_.at(document_id).status };
-}
-
-template <typename ExecutionPolicy>
-void SearchServer::RemoveDocument(ExecutionPolicy&& policy, int document_id) {
-    if (documents_ids_.count(document_id) == 0) {
-        return;
-    }
-    documents_ids_.erase(document_id);
-    if constexpr(std::is_same_v<std::decay_t<ExecutionPolicy>, std::execution::sequenced_policy>) {
-        RemoveDocument(document_id);
-    }
-    else {
-        std::vector<const std::string*> words(documents_.at(document_id).word_frequencies.size());
-        std::transform(std::execution::par,
-                       documents_[document_id].word_frequencies.begin(), documents_[document_id].word_frequencies.end(),
-                       words.begin(),
-                       [&](const auto& element) { return &(element.first); });
-        std::for_each(std::execution::par,
-                      words.begin(), words.end(),
-                      [&](const std::string* word) { auto it = documents_.find(document_id);
-                                                     documents_freqs_[*word].erase(documents_freqs_[*word].find(it->first)); });
-    }
-    documents_.erase(document_id);
-    return;
 }
 
 void AddDocument(SearchServer& search_server, int document_id, std::string_view raw_query, DocumentStatus status,

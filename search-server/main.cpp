@@ -7,7 +7,6 @@
 #include <numeric>
 #include <execution>
 #include <mutex>
-#include <future>
 #include "test_example_functions.h"
 
 using namespace std; //Подключил пространство имён, чтобы прошли тесты тренажёра. Программа работает и без этого
@@ -15,43 +14,6 @@ using namespace std; //Подключил пространство имён, чтобы прошли тесты тренажёра
 
 #include "log_duration.h"
 #include "test_framework.h"
-
-/*void PrintDocument(const Document& document) {
-    cout << "{ "s
-        << "document_id = "s << document.id << ", "s
-        << "relevance = "s << document.relevance << ", "s
-        << "rating = "s << document.rating << " }"s << endl;
-}
-int main() {
-    SearchServer search_server("and with"s);
-    int id = 0;
-    for (
-        const string& text : {
-            "white cat and yellow hat"s,
-            "curly cat curly tail"s,
-            "nasty dog with big eyes"s,
-            "nasty pigeon john"s,
-        }
-        ) {
-        search_server.AddDocument(++id, text, DocumentStatus::ACTUAL, { 1, 2 });
-    }
-    cout << "ACTUAL by default:"s << endl;
-    // последовательная версия
-    for (const Document& document : search_server.FindTopDocuments("curly nasty cat"s)) {
-        PrintDocument(document);
-    }
-    cout << "BANNED:"s << endl;
-    // последовательная версия
-    for (const Document& document : search_server.FindTopDocuments(execution::seq, "curly nasty cat"s, DocumentStatus::BANNED)) {
-        PrintDocument(document);
-    }
-    cout << "Even ids:"s << endl;
-    // параллельная версия
-    for (const Document& document : search_server.FindTopDocuments(execution::par, "curly nasty cat"s, [](int document_id, DocumentStatus status, int rating) { return document_id % 2 == 0; })) {
-        PrintDocument(document);
-    }
-    return 0;
-}*/
 
 string GenerateWord(mt19937& generator, int max_length) {
     const int length = uniform_int_distribution(1, max_length)(generator);

@@ -49,7 +49,6 @@ public:
     }
 
     std::map<Key, Value> BuildOrdinaryMap() {
-        //LOG_DURATION("BuildMap"s);
         std::map<Key, Value> result;
         for (auto& [mutex, map] : buckets_) {
             std::lock_guard guard(mutex);

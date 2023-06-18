@@ -23,12 +23,8 @@ void SearchServer::AddDocument(int document_id, std::string_view document_, Docu
     documents_ids_.emplace(document_id);
 }
 
-std::vector<Document> SearchServer::FindTopDocuments(std::string_view raw_query) const {
-    return FindTopDocuments(raw_query, DocumentStatus::ACTUAL);
-}
-
 std::vector<Document> SearchServer::FindTopDocuments(std::string_view raw_query, DocumentStatus status) const {
-    return FindTopDocuments(raw_query, [status](int document_id, DocumentStatus status_, int rating) {
+    return FindTopDocuments(std::execution::seq, raw_query, [status](int document_id, DocumentStatus status_, int rating) {
         return status_ == status; });
 }
 
@@ -36,10 +32,8 @@ size_t SearchServer::GetDocumentCount() const {
     return documents_.size();
 }
 
-std::tuple<std::vector<std::string_view>, DocumentStatus> SearchServer::MatchDocument(std::string_view raw_query,
+MatchedDocument SearchServer::MatchDocument(std::string_view raw_query,
     int document_id) const {
-    //LOG_DURATION_STREAM(__func__, std::cerr); {
-        //std::cerr << raw_query << std::endl;
     const QueryContent query = ParseQuery(raw_query);
     std::vector<std::string_view> matched_words;
     for (const std::string_view& word : query.minus_words_) {
@@ -57,7 +51,6 @@ std::tuple<std::vector<std::string_view>, DocumentStatus> SearchServer::MatchDoc
         }
     }
     return { matched_words, documents_.at(document_id).status };
-    //}
 }
 
 bool SearchServer::IsValidWord(std::string_view word) const {
@@ -131,10 +124,7 @@ int SearchServer::ComputeAverageRating(const std::vector<int>& ratings) {
     if (ratings.empty()) {
         return 0;
     }
-    int rating_sum = 0;
-    for (const int rating : ratings) {
-        rating_sum += rating;
-    }
+    int rating_sum = std::accumulate(ratings.begin(), ratings.end(), 0);
     return rating_sum / static_cast<int>(ratings.size());
 }
 

@@ -186,7 +186,6 @@ void SearchServer::RemoveDocument(Parallel, int document_id) {
     if (documents_ids_.count(document_id) == 0) {
         return;
     }
-
     documents_ids_.erase(document_id);
 
     std::vector<const std::string*> words(documents_.at(document_id).word_frequencies.size());
@@ -198,7 +197,6 @@ void SearchServer::RemoveDocument(Parallel, int document_id) {
         words.begin(), words.end(),
         [&](const std::string* word) { auto it = documents_.find(document_id);
     documents_freqs_[*word].erase(documents_freqs_[*word].find(it->first)); });
-
 
     documents_.erase(document_id);
     return;
